@@ -1,5 +1,9 @@
 package meta
 
+import (
+	"storage/db"
+)
+
 type FileMeta struct {
 	FileSha1 string
 	FileName string
@@ -8,20 +12,32 @@ type FileMeta struct {
 	UploadAt string
 }
 
-var fileMetas = make(map[string]FileMeta)
+func GetFileMeta(fileSha1 string) (FileMeta, error) {
+	tfile, err := db.GetFileMetaDB(fileSha1)
+	if err != nil {
+		return FileMeta{}, err
+	}
 
-
-func GetFileMeta(fileSha1 string) FileMeta {
-	return fileMetas[fileSha1]
+	fmeta := FileMeta{
+		FileSha1: tfile.FileHash,
+		FileName: tfile.FileName.String,
+		FileSize: tfile.FileSize.Int64,
+		Location: tfile.FilePath.String,
+	}
+	return fmeta, nil
 }
 
+func SaveFileMeta(fMeta FileMeta) bool {
+	return db.SaveFileMetaDB(fMeta.FileName, fMeta.FileSha1,
+		fMeta.FileSize, fMeta.Location)
+}
 
-func UpdateFileMeta(fMeta FileMeta) {
-	fileMetas[fMeta.FileSha1] = fMeta
+func UpdateFileMeta(fMeta FileMeta) bool {
+	return db.UpdateFileMetaDB(fMeta.FileName, fMeta.FileSha1)
 }
 
 func RemoveFileMeta(fileSha1 string) {
-	delete(fileMetas, fileSha1)
+	db.DelFileMetaDB(fileSha1)
 }
 
 

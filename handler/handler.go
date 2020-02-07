@@ -49,7 +49,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		newFile.Seek(0, 0)
 		fileMeta.FileSha1 = util.FileSha1(newFile)
 		meta.UpdateFileMeta(fileMeta)
-		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
+		http.Redirect(w, r, "/file/upload", http.StatusFound)
 	}
 }
 
@@ -61,7 +61,11 @@ func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	fileHash := r.Form["filehash"][0]
-	fMeta := meta.GetFileMeta(fileHash)
+	fMeta, err := meta.GetFileMeta(fileHash)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	data, err := json.Marshal(fMeta)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -76,7 +80,11 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	fsha1 := r.Form.Get("filehash")
-	fMeta := meta.GetFileMeta(fsha1)
+	fMeta, err := meta.GetFileMeta(fsha1)
+		if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	file, err := os.Open(fMeta.Location)
 	if err != nil {
@@ -101,7 +109,7 @@ func FileUpdateMetaHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	opType := r.Form.Get("op")
-	fileHash := r.Form.Get("filehash")
+	fsha1 := r.Form.Get("filehash")
 	newFileName := r.Form.Get("filename")
 	if opType != "0" {
 		w.WriteHeader(http.StatusForbidden)
@@ -110,7 +118,11 @@ func FileUpdateMetaHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
-	fMeta := meta.GetFileMeta(fileHash)
+	fMeta, err := meta.GetFileMeta(fsha1)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	fMeta.FileName = newFileName
 	meta.UpdateFileMeta(fMeta)
 
@@ -126,10 +138,14 @@ func FileUpdateMetaHandler(w http.ResponseWriter, r *http.Request) {
 func FileDelHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	fileHash := r.Form["filehash"][0]
-	meta.RemoveFileMeta(fileHash)
+	fsha1 := r.Form["filehash"][0]
+	meta.RemoveFileMeta(fsha1)
 
-	fMeta := meta.GetFileMeta(fileHash)
+	fMeta, err := meta.GetFileMeta(fsha1)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	os.Remove(fMeta.Location)
 
 	w.WriteHeader(http.StatusOK)
