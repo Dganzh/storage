@@ -28,7 +28,34 @@ CREATE TABLE `tb_user` (
     `profile` text COMMENT '用户属性',
     `status` int(11) NOT NULL DEFAULT '0' COMMENT '账户状态（启用/禁用/锁定/标记删除)',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `idx_phone` (`phone`),
     KEY `idx_status` (`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `tb_t` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `name` varchar(64) NOT NULL DEFAULT '' COMMENT '用户名',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `tb_token` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `user_name` varchar(64) NOT NULL DEFAULT '' COMMENT '用户名',
+    `token` varchar(40) NOT NULL DEFAULT '' COMMENT 'token',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `tb_user_file` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `user_name` varchar(64) NOT NULL DEFAULT '' COMMENT '用户名',
+    `file_sha1` char(40) NOT NULL DEFAULT '' COMMENT '文件hash',
+    `file_name` varchar(256) NOT NULL DEFAULT '' COMMENT '文件名',
+    `file_size` bigint(20) DEFAULT '0' COMMENT '文件大小',
+    `upload_at` datetime default NOW() COMMENT '上传日期',
+    `last_update` datetime default NOW() on update current_timestamp() COMMENT '最后修改时间',
+    `status` int(11) NOT NULL DEFAULT '0' COMMENT '文件状态（0-正常/1-删除/2-禁用)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `idx_user_file` (`user_name`, `file_sha1`),
+    KEY `idx_status` (`status`),
+    KEY `idx_user_id` (`user_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
 

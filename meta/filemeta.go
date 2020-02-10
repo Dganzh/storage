@@ -28,7 +28,7 @@ func GetFileMeta(fileSha1 string) (FileMeta, error) {
 }
 
 func SaveFileMeta(fMeta FileMeta) bool {
-	return db.SaveFileMetaDB(fMeta.FileName, fMeta.FileSha1,
+	return db.SaveFileMetaDB(fMeta.FileSha1, fMeta.FileName,
 		fMeta.FileSize, fMeta.Location)
 }
 

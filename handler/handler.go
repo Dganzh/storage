@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"storage/db"
 	"storage/meta"
 	"storage/util"
+	"strconv"
 	"time"
 )
 
@@ -48,33 +50,25 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		newFile.Seek(0, 0)
 		fileMeta.FileSha1 = util.FileSha1(newFile)
-		meta.UpdateFileMeta(fileMeta)
-		http.Redirect(w, r, "/file/upload", http.StatusFound)
+		fmt.Println(fileMeta.FileSha1, "||||||")
+
+		meta.SaveFileMeta(fileMeta)
+
+		r.ParseForm()
+		username := r.Form.Get("username")
+		ok := db.OnUserFileUploadFinished(username, fileMeta.FileSha1,
+			fileMeta.FileName, fileMeta.FileSize)
+		if ok {
+			http.Redirect(w, r, "/file/upload", http.StatusFound)
+		} else {
+			w.Write([]byte("Upload Failed."))
+		}
 	}
 }
 
 func UploadOkHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Upload Ok!")
 }
-
-func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	fileHash := r.Form["filehash"][0]
-	fMeta, err := meta.GetFileMeta(fileHash)
-	if err != nil{
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	data, err := json.Marshal(fMeta)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	io.WriteString(w, string(data))
-
-}
-
 
 func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -149,4 +143,82 @@ func FileDelHandler(w http.ResponseWriter, r *http.Request) {
 	os.Remove(fMeta.Location)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	limitCnt, _ := strconv.Atoi(r.Form.Get("limit"))
+	username := r.Form.Get("username")
+	userFiles, err := db.QueryUserFileMetas(username, limitCnt)
+	if err != nil {
+		fmt.Println("query user file failed", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	data, err := json.Marshal(userFiles)
+	if err != nil {
+		fmt.Println("query user file json decode failed", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(data)
+}
+
+func TryFastUploadHandler(w http.ResponseWriter, r *http.Request){
+	r.ParseForm()
+
+	username := r.Form.Get("username")
+	filehash := r.Form.Get("filehash")
+	filename := r.Form.Get("filename")
+	filesize, _ := strconv.Atoi(r.Form.Get("filesize"))
+
+	fileMeta, err := meta.GetFileMeta(filehash)
+	if err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	if fileMeta.FileName == "" {
+		resp := util.RespMsg{
+			Code: -1,
+			Msg: "秒传失败",
+		}
+		w.Write(resp.JSONBytes())
+		return
+	}
+	ok := db.OnUserFileUploadFinished(username, filehash, filename, int64(filesize))
+	if ok {
+		resp := util.RespMsg{
+			Code: 0,
+			Msg: "秒传成功",
+		}
+		w.Write(resp.JSONBytes())
+	} else {
+		resp := util.RespMsg{
+			Code: 2,
+			Msg: "上传失败，请稍后重试",
+		}
+		w.Write(resp.JSONBytes())
+	}
+
+}
+
+
+
+func FileQuery1Handler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	fileHash := r.Form["filehash"][0]
+	fMeta, err := meta.GetFileMeta(fileHash)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	data, err := json.Marshal(fMeta)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	io.WriteString(w, string(data))
+
 }

@@ -4,11 +4,19 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"hash"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
+
+const (
+	hash_salt = "1688"
+	token_salt = "1688"
+)
+
 
 type Sha1Stream struct {
 	_sha1 hash.Hash
@@ -25,9 +33,9 @@ func (obj *Sha1Stream) Sum() string {
 	return hex.EncodeToString(obj._sha1.Sum([]byte("")))
 }
 
-func Sha1(data []byte) string {
+func Sha1(str string) string {
 	_sha1 := sha1.New()
-	_sha1.Write(data)
+	_sha1.Write([]byte(str + hash_salt))
 	return hex.EncodeToString(_sha1.Sum([]byte("")))
 }
 
@@ -68,3 +76,15 @@ func GetFileSize(filename string) int64 {
 	})
 	return result
 }
+
+func CheckPwd(encPwd, pwd string) bool {
+	inEncPwd := Sha1(pwd)
+	return inEncPwd == encPwd
+}
+
+func GenToken(username string, pwd string) string {
+	st := fmt.Sprintf("%x", time.Now().Unix())
+	baseToken := MD5([]byte(username + st + token_salt))
+	return baseToken + st[:8]
+}
+
