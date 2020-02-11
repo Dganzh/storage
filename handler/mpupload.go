@@ -55,13 +55,13 @@ type MPUploadInfo struct {
 func MPUploadInitHandler(w http.ResponseWriter, r http.Request) {
 	r.ParseForm()
 
-	file_hash := r.Form.Get("filehash")
-	file_size, _ := strconv.ParseFloat(r.Form.Get("file_size"), 32)
+	filehash := r.Form.Get("filehash")
+	filesize, _ := strconv.ParseFloat(r.Form.Get("file_size"), 32)
 	username := r.Form.Get("username")
 
 	uploadid := username + fmt.Sprintf("%x", time.Now().UnixNano())
-	chunkCount := int(math.Ceil(file_size / 1024 / 1024))
-	fmt.Println(file_hash, uploadid, chunkCount)
+	chunkCount := int(math.Ceil(filesize / 1024 / 1024))
+	fmt.Println(filehash, uploadid, chunkCount)
 
 }
 
